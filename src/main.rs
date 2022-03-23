@@ -39,7 +39,7 @@ impl BoardColor {
     }
 }
 /// The length of a side of the board.
-const BOARD_SIZE: usize = 15;
+const BOARD_SIZE: usize = 10;
 
 //Keys
 static ID_CANVAS_DOTS: &str = "dot_canvas";
@@ -109,7 +109,7 @@ impl BoardState {
                 // If the position is valid, the colors at each position must be the same
                 let color_old = self.dots[Self::index(*old_x, *old_y)];
                 let color_new = self.dots[Self::index(x, y)];
-                println!("{:?} == {:?}", color_old, color_new);
+                // println!("{:?} == {:?}", color_old, color_new);
                 color_new == color_old
             } else {
                 // println!("Can't connect because of distance");
@@ -123,13 +123,8 @@ impl BoardState {
     /// Detect if the trail has a loop in it(a good thing)
     pub fn has_loop(self: &Self) -> bool {
         for (b, x) in self.trail.iter().enumerate() {
-            for (a, y) in self.trail[b + 1..].iter().enumerate() {
-                // if a == b {
-                //     continue;
-                // }
-                if *x == *y {
-                    return true;
-                }
+            if self.trail[b+1..].contains(x){
+                return true;
             }
         }
         false
@@ -214,12 +209,10 @@ impl BoardState {
             });
     }
     pub fn handle_click(self: &mut Self, x: usize, y: usize) {
-        println!("Handle click called with {}, {}", x, y);
-        println!("At start, we have {} items in trail", self.trail.len());
         if self.trail.len() > 0 {
             let pos = self.trail.last().expect("This shouldn't happen");
             if self.trail.len() >= 2 && pos.0 == x && pos.1 == y {
-                self.score+=self.finish_trail();
+                self.score += self.finish_trail();
                 self.trail.clear();
             } else {
                 if self.can_connect(x, y) {
@@ -232,6 +225,14 @@ impl BoardState {
         } else {
             self.trail.push((x, y))
         }
+    }
+
+    pub fn reset(self: &mut Self) {
+        self.dots.iter_mut().for_each(|b| {
+            *b = BoardColor::random();
+        });
+        self.score = 0;
+        self.trail.clear();
     }
 }
 impl Default for BoardState {
@@ -294,7 +295,7 @@ widget!(DotBoard<BoardState>: MouseHandler {
 });
 
 impl State for BoardState {
-    fn init(self: &mut Self, _: &mut Registry, ctx: &mut Context) {
+    fn init(self: &mut Self, _reg: &mut Registry, ctx: &mut Context) {
         for y in 0..BOARD_SIZE {
             for x in 0..BOARD_SIZE {
                 let thing = format!("{}x{}", x, y);
@@ -308,22 +309,15 @@ impl State for BoardState {
             ctx.entity_of_child("score_label")
                 .expect("Couldn't find score label"),
         );
-        self.dots
-            .iter()
-            .zip(self.board_widgets.iter())
-            .for_each(|(&bc, &en)| {
-                ctx.get_widget(en).set("background", bc.get_brush());
-                // ctx.get_widget(en).set("foreground", bc.get_brush());
-            });
+        self.update(_reg,ctx);
     }
-    fn update(self: &mut Self, reg: &mut Registry, ctx: &mut Context) {
-        println!("hi there");
+    fn update(self: &mut Self, _reg: &mut Registry, ctx: &mut Context) {
         if let Some(ac) = self.action {
             self.handle_click(ac.x, ac.y);
             self.action = None;
         }
         let mut score_label = ctx.get_widget(self.score_label.expect("Failed to find label"));
-        let mut text = score_label.get_mut::<String>("text");
+        let text = score_label.get_mut::<String>("text");
         *text = format!("Score: {}", self.score);
         for x in 0..BOARD_SIZE {
             for y in 0..BOARD_SIZE {
@@ -337,7 +331,11 @@ impl State for BoardState {
                     .iter()
                     .any(|&(x, y)| format!("{}x{}", x, y) == *id)
                 {
-                    ctx.get_widget(en).set("text", "trail".to_string());
+                    if *self.trail.last().expect("") == (x, y) {
+                        ctx.get_widget(en).set("text", "HERE".to_string());
+                    } else {
+                        ctx.get_widget(en).set("text", "trail".to_string());
+                    }
                 } else {
                     if self.can_connect(x, y) {
                         ctx.get_widget(en).set("text", "sure".to_string());
@@ -347,24 +345,6 @@ impl State for BoardState {
                 }
             }
         }
-        // self.dots
-        //     .iter()
-        //     .zip(self.board_widgets.iter())
-        //     .for_each(|(&bc, &en)| {
-        //         ctx.get_widget(en).set("background", bc.get_brush());
-        //         let id = ctx.get_widget(en).get::<String>("id").clone();
-        //         if self
-        //             .trail
-        //             .iter()
-        //             .any(|&(x, y)| format!("{}x{}", x, y) == *id)
-        //         {
-        //             ctx.get_widget(en).set("text", "trail".to_string());
-        //         } else {
-        //             ctx.get_widget(en).set("text", "no".to_string());
-        //         }
-
-        //         // ctx.get_widget(en).set("foreground", bc.get_brush());
-        //     });
     }
 }
 fn generate_rectangle(x: usize, y: usize, id: Entity, ctx: &mut BuildContext) -> Button {
@@ -376,8 +356,6 @@ fn generate_rectangle(x: usize, y: usize, id: Entity, ctx: &mut BuildContext) ->
         .padding(1)
         .style("")
         .on_click(move |ctx, a| {
-            println!("{}, {}", x, y);
-
             ctx.get_mut::<BoardState>(id).action = Some(DotAction { x, y });
             true
         });
@@ -408,7 +386,21 @@ impl Template for DotBoard {
                 grid = grid.place(ctx, button, x, BOARD_SIZE - 1 - y);
             }
         }
-        grid = grid.place(ctx, TextBlock::new().id("score_label"), 0, BOARD_SIZE);
+        let id2 = id;
+        grid = grid
+            .place(ctx, TextBlock::new().id("score_label"), 0, BOARD_SIZE)
+            .place(
+                ctx,
+                Button::new()
+                    .text("Reset")
+                    .on_click(move |a, b| {
+                        a.get_mut::<BoardState>(id2).reset();
+                        true
+                    })
+                    .attach(Grid::column_span(3)),
+                1,
+                BOARD_SIZE,
+            );
         self.name("DotBoard")
             // .v_align("stretch")
             // .h_align("stretch")
@@ -430,19 +422,6 @@ impl RenderPipeline for DotBoard {
 }
 fn main() {
     println!("Hello, world!");
-    let mut board = BoardState::new();
-    board.trail.push((0, 0));
-    board.trail.push((0, 1));
-    board.trail.push((1, 1));
-    board.trail.push((1, 0));
-    board.trail.push((0, 0));
-    assert!(board.has_loop());
-    board.print();
-    println!("{}", board.finish_trail());
-    board.print();
-    // orbtk::initialize();
-    // The theme needs to be changed here so that the buttons don't do that silly on-hover
-    // color change here.
     Application::new()
         .window(|ctx| {
             Window::new()
