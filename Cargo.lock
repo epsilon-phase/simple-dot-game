@@ -131,7 +131,8 @@ checksum = "b365fabc795046672053e29c954733ec3b05e4be654ab130fe8f1f94d7051f35"
 [[package]]
 name = "dces"
 version = "0.3.1"
-source = "git+https://gitlab.redox-os.org/redox-os/dces-rust.git?branch=before_resource#f85e608e74105a8822294f55c823b89c4047a6f5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fa186d9857ada6c99a4f985c7eb10d071fc9c8e9b35b9360dea86d743f4be9d"
 dependencies = [
  "fxhash",
 ]
@@ -290,9 +291,9 @@ checksum = "efaa7b300f3b5fe8eb6bf21ce3895e1751d9665086af2d64b42f19701015ff4f"
 
 [[package]]
 name = "log"
-version = "0.4.14"
+version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
+checksum = "6389c490849ff5bc16be905ae24bc913a9c8892e19b2341dbc175e14c341c2b8"
 dependencies = [
  "cfg-if",
 ]
@@ -390,7 +391,7 @@ dependencies = [
 [[package]]
 name = "orbtk"
 version = "0.3.1-alpha5"
-source = "git+https://github.com/redox-os/orbtk.git?branch=develop#d90d8226797966b785f129ba8e2a23d1da9cd6de"
+source = "git+https://github.com/redox-os/orbtk.git?branch=develop#18ed1840ba3fa4c3a6b70d9cf1f081675a72d493"
 dependencies = [
  "dces",
  "orbtk_core",
@@ -404,7 +405,7 @@ dependencies = [
 [[package]]
 name = "orbtk_core"
 version = "0.3.1-alpha5"
-source = "git+https://github.com/redox-os/orbtk.git?branch=develop#d90d8226797966b785f129ba8e2a23d1da9cd6de"
+source = "git+https://github.com/redox-os/orbtk.git?branch=develop#18ed1840ba3fa4c3a6b70d9cf1f081675a72d493"
 dependencies = [
  "dces",
  "derive_more",
@@ -427,7 +428,7 @@ dependencies = [
 [[package]]
 name = "orbtk_orbclient"
 version = "0.3.1-alpha5"
-source = "git+https://github.com/redox-os/orbtk.git?branch=develop#d90d8226797966b785f129ba8e2a23d1da9cd6de"
+source = "git+https://github.com/redox-os/orbtk.git?branch=develop#18ed1840ba3fa4c3a6b70d9cf1f081675a72d493"
 dependencies = [
  "image",
  "lazy_static",
@@ -441,7 +442,7 @@ dependencies = [
 [[package]]
 name = "orbtk_proc_macros"
 version = "0.3.1-alpha5"
-source = "git+https://github.com/redox-os/orbtk.git?branch=develop#d90d8226797966b785f129ba8e2a23d1da9cd6de"
+source = "git+https://github.com/redox-os/orbtk.git?branch=develop#18ed1840ba3fa4c3a6b70d9cf1f081675a72d493"
 dependencies = [
  "case",
  "proc-macro2",
@@ -452,7 +453,7 @@ dependencies = [
 [[package]]
 name = "orbtk_tinyskia"
 version = "0.3.1-alpha5"
-source = "git+https://github.com/redox-os/orbtk.git?branch=develop#d90d8226797966b785f129ba8e2a23d1da9cd6de"
+source = "git+https://github.com/redox-os/orbtk.git?branch=develop#18ed1840ba3fa4c3a6b70d9cf1f081675a72d493"
 dependencies = [
  "image",
  "orbtk_utils",
@@ -464,7 +465,7 @@ dependencies = [
 [[package]]
 name = "orbtk_utils"
 version = "0.3.1-alpha5"
-source = "git+https://github.com/redox-os/orbtk.git?branch=develop#d90d8226797966b785f129ba8e2a23d1da9cd6de"
+source = "git+https://github.com/redox-os/orbtk.git?branch=develop#18ed1840ba3fa4c3a6b70d9cf1f081675a72d493"
 dependencies = [
  "derive_more",
  "lexical-core",
@@ -477,7 +478,7 @@ dependencies = [
 [[package]]
 name = "orbtk_widgets"
 version = "0.3.1-alpha5"
-source = "git+https://github.com/redox-os/orbtk.git?branch=develop#d90d8226797966b785f129ba8e2a23d1da9cd6de"
+source = "git+https://github.com/redox-os/orbtk.git?branch=develop#18ed1840ba3fa4c3a6b70d9cf1f081675a72d493"
 dependencies = [
  "dces",
  "lazy_static",
