@@ -398,7 +398,6 @@ fn generate_board_button(x: usize, y: usize, id: Entity, ctx: &mut BuildContext)
             true
         });
     button
-    // button.build(ctx)
 }
 impl Template for DotBoard {
     fn template(self, id: Entity, ctx: &mut BuildContext<'_>) -> Self {
@@ -414,7 +413,6 @@ impl Template for DotBoard {
         for y in 0..BOARD_SIZE {
             for x in 0..BOARD_SIZE {
                 let button = generate_board_button(x, y, id, ctx);
-                // grid = grid.place(ctx, button, x, y);
                 grid = grid.place(ctx, button, x, BOARD_SIZE - 1 - y);
             }
         }
@@ -440,17 +438,12 @@ impl Template for DotBoard {
                 2,
             );
         self.name("DotBoard")
-            // .v_align("stretch")
-            // .h_align("stretch")
             .child(
                 Container::new()
                     .child(new_grid.v_align("stretch").h_align("stretch").build(ctx))
                     .build(ctx),
             )
     }
-    // fn layout(&self) -> Box<dyn Layout> {
-    //     Box::new(PaddingLayout::new())
-    // }
 }
 impl RenderPipeline for DotBoard {
     fn draw(self: &Self, image: &mut RenderTarget) {
