@@ -8,3 +8,10 @@ edition = "2021"
 [dependencies]
 orbtk = { git = "https://github.com/redox-os/orbtk.git", branch= "develop" }
 rand = "0.8.5"
+
+[profile.release-small]
+inherits="release"
+opt-level='s'
+lto=true
+panic="abort"
+strip=true

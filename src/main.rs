@@ -37,6 +37,15 @@ impl BoardColor {
             BoardColor::Empty => "#000000",
         }
     }
+    pub fn get_glyph(&self) -> char {
+        match *self {
+            BoardColor::Red => 'R',
+            BoardColor::Blue => 'B',
+            BoardColor::Green => 'G',
+            BoardColor::Yellow => 'Y',
+            BoardColor::Empty => 'E',
+        }
+    }
 }
 /// The length of a side of the board.
 const BOARD_SIZE: usize = 10;
@@ -63,7 +72,10 @@ struct BoardState {
     score_label: Option<Entity>,
     action: Option<DotAction>,
     score: usize,
+    moves_left: usize,
 }
+///The number of moves that are allowed to be played in a single game.
+const MOVE_LIMIT: usize = 30;
 
 impl BoardState {
     pub fn new() -> Self {
@@ -74,6 +86,7 @@ impl BoardState {
             action: None,
             score_label: None,
             score: 0,
+            moves_left: MOVE_LIMIT,
         };
         for i in 0..BOARD_SIZE * BOARD_SIZE {
             r.dots[i] = BoardColor::random();
@@ -109,10 +122,8 @@ impl BoardState {
                 // If the position is valid, the colors at each position must be the same
                 let color_old = self.dots[Self::index(*old_x, *old_y)];
                 let color_new = self.dots[Self::index(x, y)];
-                // println!("{:?} == {:?}", color_old, color_new);
                 color_new == color_old
             } else {
-                // println!("Can't connect because of distance");
                 false
             }
         } else {
@@ -123,7 +134,7 @@ impl BoardState {
     /// Detect if the trail has a loop in it(a good thing)
     pub fn has_loop(self: &Self) -> bool {
         for (b, x) in self.trail.iter().enumerate() {
-            if self.trail[b+1..].contains(x){
+            if self.trail[b + 1..].contains(x) {
                 return true;
             }
         }
@@ -214,6 +225,7 @@ impl BoardState {
             if self.trail.len() >= 2 && pos.0 == x && pos.1 == y {
                 self.score += self.finish_trail();
                 self.trail.clear();
+                self.moves_left -= 1;
             } else {
                 if self.can_connect(x, y) {
                     self.trail.push((x, y));
@@ -233,6 +245,7 @@ impl BoardState {
         });
         self.score = 0;
         self.trail.clear();
+        self.moves_left = MOVE_LIMIT;
     }
 }
 impl Default for BoardState {
@@ -309,7 +322,7 @@ impl State for BoardState {
             ctx.entity_of_child("score_label")
                 .expect("Couldn't find score label"),
         );
-        self.update(_reg,ctx);
+        self.update(_reg, ctx);
     }
     fn update(self: &mut Self, _reg: &mut Registry, ctx: &mut Context) {
         if let Some(ac) = self.action {
@@ -318,13 +331,15 @@ impl State for BoardState {
         }
         let mut score_label = ctx.get_widget(self.score_label.expect("Failed to find label"));
         let text = score_label.get_mut::<String>("text");
-        *text = format!("Score: {}", self.score);
+        *text = format!("Score: {}, moves left: {}", self.score, self.moves_left);
         for x in 0..BOARD_SIZE {
             for y in 0..BOARD_SIZE {
                 let idx = Self::index(x, y);
                 let en = self.board_widgets[idx];
+
                 let bc = self.dots[idx];
                 ctx.get_widget(en).set("background", bc.get_brush());
+                let mut text: String = format!("{}", bc.get_glyph());
                 let id = ctx.get_widget(en).get::<String>("id").clone();
                 if self
                     .trail
@@ -332,29 +347,52 @@ impl State for BoardState {
                     .any(|&(x, y)| format!("{}x{}", x, y) == *id)
                 {
                     if *self.trail.last().expect("") == (x, y) {
-                        ctx.get_widget(en).set("text", "HERE".to_string());
+                        text = format!("{}(H)", text);
+                        // ctx.get_widget(en).set("text", "HERE".to_string());
+                        ctx.get_widget(en).set("border_width", Thickness::from(2.0));
+                        ctx.get_widget(en)
+                            .set("border_brush", Brush::from("#ffffff"));
                     } else {
-                        ctx.get_widget(en).set("text", "trail".to_string());
+                        text = format!("{}(T)", text);
+                        // ctx.get_widget(en).set("text", "trail".to_string());
+                        ctx.get_widget(en).set("border_width", Thickness::from(1.0));
+                        ctx.get_widget(en)
+                            .set("border_brush", Brush::from("#ff00ff"));
                     }
                 } else {
                     if self.can_connect(x, y) {
-                        ctx.get_widget(en).set("text", "sure".to_string());
+                        text = format!("{}(A)", text);
+                        // ctx.get_widget(en).set("text", "sure".to_string());
+                        // The orange outline should only be shown when the trail isn't trivial
+                        ctx.get_widget(en).set(
+                            "border_width",
+                            Thickness::from(if self.trail.len() > 0 { 2.0 } else { 0.0 }),
+                        );
+                        ctx.get_widget(en)
+                            .set("border_brush", Brush::from("#ffa500"));
                     } else {
-                        ctx.get_widget(en).set("text", "no".to_string());
+                        text = format!("{}(X)", text);
+                        // ctx.get_widget(en).set("text", "no".to_string());
+                        ctx.get_widget(en).set("border_width", Thickness::from(0.0));
                     }
                 }
+                ctx.get_widget(en).set("text", text);
             }
         }
     }
 }
-fn generate_rectangle(x: usize, y: usize, id: Entity, ctx: &mut BuildContext) -> Button {
-    println!("Adding button at {}, {}", x, y);
+/**
+ * Generate a button for the board, with minimal styling, the size, etc.
+ */
+fn generate_board_button(x: usize, y: usize, id: Entity, ctx: &mut BuildContext) -> Button {
     let button = Button::new()
         .id(format!("{}x{}", x, y))
         .text(format!("{} {}", x, y))
-        .min_size(0, 0)
-        .padding(1)
         .style("")
+        .border_radius(15)
+        .min_size(10, 30)
+        .max_size(40, 40)
+        .foreground(Brush::from("#000000"))
         .on_click(move |ctx, a| {
             ctx.get_mut::<BoardState>(id).action = Some(DotAction { x, y });
             true
@@ -373,22 +411,21 @@ impl Template for DotBoard {
             BOARD_SIZE + 1,
         );
         grid = grid.columns(columns).rows(rows);
-        // for i in 0..BOARD_SIZE * BOARD_SIZE {
-        //     let x = i % BOARD_SIZE;
-        //     let y = i / BOARD_SIZE;
-        //     let button = generate_rectangle(x, y, id, ctx);
-        //     grid = grid.place(ctx, button, x, y);
-        // }
         for y in 0..BOARD_SIZE {
             for x in 0..BOARD_SIZE {
-                let button = generate_rectangle(x, y, id, ctx);
+                let button = generate_board_button(x, y, id, ctx);
                 // grid = grid.place(ctx, button, x, y);
                 grid = grid.place(ctx, button, x, BOARD_SIZE - 1 - y);
             }
         }
         let id2 = id;
-        grid = grid
-            .place(ctx, TextBlock::new().id("score_label"), 0, BOARD_SIZE)
+        // Without another grid the grid of buttons is sized for the label and button,
+        // which doesn't happen to look especially square
+        let new_grid = Grid::new()
+            .columns(Blocks::create().push(Block::create().size(BlockSize::Auto).build()))
+            .rows(Blocks::create().repeat(Block::create().size(BlockSize::Auto).build(), 3))
+            .place(ctx, grid, 0, 0)
+            .place(ctx, TextBlock::new().id("score_label"), 0, 1)
             .place(
                 ctx,
                 Button::new()
@@ -397,16 +434,17 @@ impl Template for DotBoard {
                         a.get_mut::<BoardState>(id2).reset();
                         true
                     })
-                    .attach(Grid::column_span(3)),
-                1,
-                BOARD_SIZE,
+                    .attach(Grid::column_span(1))
+                    .h_align(Alignment::Center),
+                0,
+                2,
             );
         self.name("DotBoard")
             // .v_align("stretch")
             // .h_align("stretch")
             .child(
                 Container::new()
-                    .child(grid.v_align("stretch").h_align("stretch").build(ctx))
+                    .child(new_grid.v_align("stretch").h_align("stretch").build(ctx))
                     .build(ctx),
             )
     }
@@ -421,11 +459,10 @@ impl RenderPipeline for DotBoard {
     }
 }
 fn main() {
-    println!("Hello, world!");
     Application::new()
         .window(|ctx| {
             Window::new()
-                .title("Henlo")
+                .title("Terrible dot game")
                 .position((100.0, 100.0))
                 .size(600.0, 600.0)
                 .child(DotBoard::new().width(600).height(600).build(ctx))
