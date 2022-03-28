@@ -1,8 +1,7 @@
 use orbtk::prelude::*;
 use rand::{thread_rng, Rng};
 use std::{
-    borrow::{Borrow, BorrowMut},
-    cell::Cell,
+    cell::Cell, borrow::BorrowMut,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -73,6 +72,7 @@ struct BoardState {
     action: Option<DotAction>,
     score: usize,
     moves_left: usize,
+    moused_over: Option<Entity>
 }
 ///The number of moves that are allowed to be played in a single game.
 const MOVE_LIMIT: usize = 30;
@@ -87,6 +87,7 @@ impl BoardState {
             score_label: None,
             score: 0,
             moves_left: MOVE_LIMIT,
+            moused_over: None
         };
         for i in 0..BOARD_SIZE * BOARD_SIZE {
             r.dots[i] = BoardColor::random();
@@ -379,12 +380,15 @@ impl State for BoardState {
                 ctx.get_widget(en).set("text", text);
             }
         }
+        if let Some(button) = self.moused_over {
+            ctx.get_widget(button).set("border_brush",Brush::from("#00FAFA"));
+        }
     }
 }
 /**
  * Generate a button for the board, with minimal styling, the size, etc.
  */
-fn generate_board_button(x: usize, y: usize, id: Entity, ctx: &mut BuildContext) -> Button {
+fn generate_board_button(x: usize, y: usize, id: Entity, _ctx: &mut BuildContext) -> Button {
     let button = Button::new()
         .id(format!("{}x{}", x, y))
         .text(format!("{} {}", x, y))
@@ -393,7 +397,14 @@ fn generate_board_button(x: usize, y: usize, id: Entity, ctx: &mut BuildContext)
         .min_size(10, 30)
         .max_size(40, 40)
         .foreground(Brush::from("#000000"))
-        .on_click(move |ctx, a| {
+        .on_enter(move |ctx,_point|{
+            let button_id = ctx.get_mut::<BoardState>(id).board_widgets[BoardState::index(x,y)];
+            ctx.get_mut::<BoardState>(id).moused_over=Some(button_id);
+        })
+        .on_leave(move |ctx, _point|{
+            ctx.get_mut::<BoardState>(id).moused_over=None;
+        })
+        .on_click(move |ctx, _a| {
             ctx.get_mut::<BoardState>(id).action = Some(DotAction { x, y });
             true
         });
@@ -416,7 +427,6 @@ impl Template for DotBoard {
                 grid = grid.place(ctx, button, x, BOARD_SIZE - 1 - y);
             }
         }
-        let id2 = id;
         // Without another grid the grid of buttons is sized for the label and button,
         // which doesn't happen to look especially square
         let new_grid = Grid::new()
@@ -429,7 +439,7 @@ impl Template for DotBoard {
                 Button::new()
                     .text("Reset")
                     .on_click(move |a, b| {
-                        a.get_mut::<BoardState>(id2).reset();
+                        a.get_mut::<BoardState>(id).reset();
                         true
                     })
                     .attach(Grid::column_span(1))
