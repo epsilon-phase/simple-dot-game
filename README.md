@@ -11,9 +11,9 @@ Out of determination to experience native rust gui goodness.
 
 ## Did you find Rust GUI goodness?
 
-Well, it's a **lot** better than it was last time I looked. I'm not decided on
-OrbTk honestly
+Well, it's a **lot** better than it was last time I looked. Orbtk is a very 
+barebones experience right now, but it is far better than it used to be.
 
-I'm not sure if it's just that I did it all in one file, which never tends to 
-help, but right now it feels like I'm struggling with adapting my knowledge of 
-gui patterns to an entity component pattern.
+The one complaint that I have that isn't just the immature nature of the
+library, is that whenever the window closes, it causes my screens to flicker,
+and for what you get, it's fairly slow.

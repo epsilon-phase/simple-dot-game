@@ -7,17 +7,19 @@ enum BoardColor {
     Blue,
     Green,
     Yellow,
+    Purple,
     Empty,
 }
 impl BoardColor {
     pub fn random() -> Self {
         let mut rng = thread_rng();
-        let n: i32 = rng.gen_range(0..4);
+        let n: i32 = rng.gen_range(0..5);
         match n {
             0 => BoardColor::Red,
             1 => BoardColor::Blue,
             2 => BoardColor::Green,
             3 => BoardColor::Yellow,
+            4 => BoardColor::Purple,
             _ => panic!("Got an invalid random number??"),
         }
     }
@@ -30,6 +32,7 @@ impl BoardColor {
             BoardColor::Blue => "#00AAFF",
             BoardColor::Green => "#00FF00",
             BoardColor::Yellow => "#FFFF00",
+            BoardColor::Purple => "#EE00EE",
             BoardColor::Empty => "#000000",
         }
     }
@@ -39,6 +42,7 @@ impl BoardColor {
             BoardColor::Blue => 'B',
             BoardColor::Green => 'G',
             BoardColor::Yellow => 'Y',
+            BoardColor::Purple => 'P',
             BoardColor::Empty => 'E',
         }
     }
@@ -192,8 +196,8 @@ impl BoardState {
         true
     }
     /**
-     * Remove empty cells by moving them up the board and then
-     * replacing them
+     Remove empty cells by moving them up the board and then
+     replacing them
      */
     pub fn drop_remaining(&mut self) {
         for x in 0..BOARD_SIZE {
@@ -214,10 +218,9 @@ impl BoardState {
         }
     }
     /**
-     * Clear the dots that have been matched, resets the trail, and whatever.
-     *
-     * Returns the number of dots cleared.
-     *
+     Clear the dots that have been matched, resets the trail, etc.
+     
+     Returns the number of dots cleared.
      */
     pub fn finish_trail(&mut self) -> usize {
         if self.trail.len() < 2 {
