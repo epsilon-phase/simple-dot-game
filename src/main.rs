@@ -1,6 +1,5 @@
 use orbtk::prelude::*;
 use rand::{thread_rng, Rng};
-use std::cell::Cell;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 enum BoardColor {
@@ -54,8 +53,8 @@ struct DotAction {
 }
 
 /**
- The implementation  of a board state.
- */
+The implementation  of a board state.
+*/
 #[derive(PartialEq, Eq, AsAny)]
 struct BoardState {
     /// Stores the board in a linear array
@@ -90,17 +89,16 @@ impl BoardState {
         r
     }
     /**
-     Calculate the effective index for the position on the board
-     */
+    Calculate the effective index for the position on the board
+    */
     pub fn index(x: usize, y: usize) -> usize {
         y * BOARD_SIZE + x
     }
-    
 
     /**
-     Check if the next position can be connected.
-     */
-    pub fn can_connect(self: &Self, x: usize, y: usize) -> bool {
+    Check if the next position can be connected.
+    */
+    pub fn can_connect(&self, x: usize, y: usize) -> bool {
         //Check if the trail is empty
         if let Some((old_x, old_y)) = self.trail.last() {
             //If it isn't, check if the next coordinates are adjacent to the last position
@@ -124,7 +122,7 @@ impl BoardState {
         }
     }
     /// Detect if the trail has a loop in it(a good thing)
-    pub fn has_loop(self: &Self) -> bool {
+    pub fn has_loop(&self) -> bool {
         for (b, x) in self.trail.iter().enumerate() {
             if self.trail[b + 1..].contains(x) {
                 return true;
@@ -133,13 +131,13 @@ impl BoardState {
         false
     }
     /**
-      Fill a column which all empty slots have been moved upwards.
-     
-      This rerolls some number of times if the newly placed dot would create a trivial cycle
-     
-      Returns true if the column is able to be filled and is filled. Otherwise returns false 
-      if more sorting is needed.
-     */
+     Fill a column which all empty slots have been moved upwards.
+
+     This rerolls some number of times if the newly placed dot would create a trivial cycle
+
+     Returns true if the column is able to be filled and is filled. Otherwise returns false
+     if more sorting is needed.
+    */
     fn fill_column(&mut self, x: usize) -> bool {
         let mut first_empty: usize = BOARD_SIZE - 1;
         let mut seen_non_empty = false;
@@ -197,7 +195,7 @@ impl BoardState {
      * Remove empty cells by moving them up the board and then
      * replacing them
      */
-    pub fn drop_remaining(self: &mut Self) {
+    pub fn drop_remaining(&mut self) {
         for x in 0..BOARD_SIZE {
             let mut found_empty = true;
             while found_empty {
@@ -221,7 +219,7 @@ impl BoardState {
      * Returns the number of dots cleared.
      *
      */
-    pub fn finish_trail(self: &mut Self) -> usize {
+    pub fn finish_trail(&mut self) -> usize {
         if self.trail.len() < 2 {
             return 0;
         }
@@ -251,7 +249,7 @@ impl BoardState {
         self.drop_remaining();
         count
     }
-    pub fn handle_click(self: &mut Self, x: usize, y: usize) {
+    pub fn handle_click(&mut self, x: usize, y: usize) {
         if self.moves_left == 0 {
             return;
         }
@@ -272,7 +270,7 @@ impl BoardState {
         }
     }
 
-    pub fn reset(self: &mut Self) {
+    pub fn reset(&mut self) {
         self.dots.iter_mut().for_each(|b| {
             *b = BoardColor::random();
         });
@@ -284,38 +282,6 @@ impl BoardState {
 impl Default for BoardState {
     fn default() -> Self {
         BoardState::new()
-    }
-}
-
-struct DotBoardRenderPipeline {
-    data: Cell<[BoardColor; BOARD_SIZE * BOARD_SIZE]>,
-}
-impl RenderPipeline for DotBoardRenderPipeline {
-    fn draw(self: &Self, target: &mut RenderTarget) {
-        let thing = self.data.get();
-        let width = target.width() / (BOARD_SIZE as f64);
-        let height = target.height() / (BOARD_SIZE as f64);
-        let mut ctx = RenderContext2D::new(target.width(), target.height());
-
-        thing
-            .iter()
-            .enumerate()
-            .map(|(idx, color)| ((idx % BOARD_SIZE, idx / BOARD_SIZE), color))
-            .map(|((x, y), color)| ((x as f64 * width, y as f64 * height), color))
-            .map(|(position, color)| {
-                let col = match *color {
-                    BoardColor::Red => "#FF0000",
-                    BoardColor::Blue => "#0000FF",
-                    BoardColor::Yellow => "#FFFF00",
-                    BoardColor::Green => "#00FF00",
-                    BoardColor::Empty => "#252525",
-                };
-                (position, col)
-            })
-            .for_each(|(position, color)| {
-                ctx.set_fill_style(Brush::from(color));
-                ctx.fill_rect(position.0, position.1, width, height);
-            })
     }
 }
 
@@ -341,7 +307,7 @@ widget!(DotBoard<BoardState>: MouseHandler {
 });
 
 impl State for BoardState {
-    fn init(self: &mut Self, _reg: &mut Registry, ctx: &mut Context) {
+    fn init(&mut self, _reg: &mut Registry, ctx: &mut Context) {
         for y in 0..BOARD_SIZE {
             for x in 0..BOARD_SIZE {
                 let thing = format!("{}x{}", x, y);
@@ -357,7 +323,7 @@ impl State for BoardState {
         );
         self.update(_reg, ctx);
     }
-    fn update(self: &mut Self, _reg: &mut Registry, ctx: &mut Context) {
+    fn update(&mut self, _reg: &mut Registry, ctx: &mut Context) {
         if let Some(ac) = self.action {
             self.handle_click(ac.x, ac.y);
             self.action = None;
@@ -492,12 +458,6 @@ impl Template for DotBoard {
 
     fn layout(&self) -> Box<dyn Layout> {
         GridLayout::new().into()
-    }
-}
-impl RenderPipeline for DotBoard {
-    fn draw(self: &Self, image: &mut RenderTarget) {
-        let mut ctx = RenderContext2D::new(self.bounds.width(), self.bounds.height());
-        ctx.draw_render_target(image, 0.0, 0.0);
     }
 }
 fn main() {
