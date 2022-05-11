@@ -95,12 +95,7 @@ impl BoardState {
     pub fn index(x: usize, y: usize) -> usize {
         y * BOARD_SIZE + x
     }
-    /**
-     Set the dot's color at a given position
-     */
-    pub fn set_position(self: &mut Self, x: usize, y: usize, color: BoardColor) {
-        self.dots[Self::index(x, y)] = color;
-    }
+    
 
     /**
      Check if the next position can be connected.
@@ -255,27 +250,6 @@ impl BoardState {
         self.trail.clear();
         self.drop_remaining();
         count
-    }
-
-    pub fn print(self: &Self) {
-        self.dots
-            .chunks(BOARD_SIZE) //Operate on rows
-            .rev() //Work with the topmost row being the last row
-            .map(|x| {
-                x.iter().map(|x| match *x {
-                    //It's probably not a good idea to do the escapes this way,
-                    // but like, this is for debugging right now
-                    BoardColor::Red => "\x1b[31mR",
-                    BoardColor::Blue => "\x1b[34mB",
-                    BoardColor::Green => "\x1b[32mG",
-                    BoardColor::Yellow => "\x1b[33mY",
-                    BoardColor::Empty => "\x1b[30mX",
-                })
-            })
-            .for_each(|x| {
-                let z = x.collect::<String>();
-                println!("{}", z);
-            });
     }
     pub fn handle_click(self: &mut Self, x: usize, y: usize) {
         if self.moves_left == 0 {
