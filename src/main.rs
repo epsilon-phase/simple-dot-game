@@ -69,6 +69,8 @@ struct BoardState {
     score_label: Option<Entity>,
     action: Option<DotAction>,
     score: usize,
+    last_score:usize,
+    
     moves_left: usize,
     moused_over: Option<Entity>,
 }
@@ -78,12 +80,13 @@ const MOVE_LIMIT: usize = 30;
 impl BoardState {
     pub fn new() -> Self {
         let mut r: BoardState = BoardState {
-            dots: [BoardColor::Green; BOARD_SIZE * BOARD_SIZE],
+            dots: [BoardColor::Empty; BOARD_SIZE * BOARD_SIZE],
             trail: Vec::new(),
             board_widgets: Vec::new(),
             action: None,
             score_label: None,
             score: 0,
+            last_score:0,
             moves_left: MOVE_LIMIT,
             moused_over: None,
         };
@@ -155,7 +158,8 @@ impl BoardState {
             }
         }
         for y in first_empty..BOARD_SIZE {
-            self.dots[Self::index(x, y)] = BoardColor::random();
+            let i0 = Self::index(x, y);
+            self.dots[i0] = BoardColor::random();
             if y == 0 {
                 continue;
             }
@@ -171,24 +175,25 @@ impl BoardState {
             let total_rolls = 3;
             for roll in 0..total_rolls {
                 let mut roll_again = false;
+
                 let i3 = Self::index(x, y - 1);
                 if x > 1 {
                     let i1 = Self::index(x - 1, y);
                     let i2 = Self::index(x - 1, y - 1);
-                    roll_again |= self.dots[i1] == self.dots[Self::index(x, y)]
+                    roll_again |= self.dots[i1] == self.dots[i0]
                         && self.dots[i1] == self.dots[i2]
                         && self.dots[i1] == self.dots[i3];
                 }
                 if x < BOARD_SIZE - 1 {
                     let i4 = Self::index(x + 1, y - 1);
                     let i5 = Self::index(x + 1, y);
-                    roll_again |= self.dots[i3] == self.dots[Self::index(x, y)]
+                    roll_again |= self.dots[i3] == self.dots[i0]
                         && self.dots[i3] == self.dots[i4]
                         && self.dots[i3] == self.dots[i5];
                 }
                 if roll_again {
                     println!("Rerolling! {}", roll);
-                    self.dots[Self::index(x, y)] = BoardColor::random();
+                    self.dots[i0] = BoardColor::random();
                 }
             }
         }
@@ -196,9 +201,9 @@ impl BoardState {
         true
     }
     /**
-     Remove empty cells by moving them up the board and then
-     replacing them
-     */
+    Remove empty cells by moving them up the board and then
+    replacing them
+    */
     pub fn drop_remaining(&mut self) {
         for x in 0..BOARD_SIZE {
             let mut found_empty = true;
@@ -217,11 +222,12 @@ impl BoardState {
             }
         }
     }
+
     /**
-     Clear the dots that have been matched, resets the trail, etc.
-     
-     Returns the number of dots cleared.
-     */
+    Clear the dots that have been matched, resets the trail, etc.
+
+    Returns the number of dots cleared.
+    */
     pub fn finish_trail(&mut self) -> usize {
         if self.trail.len() < 2 {
             return 0;
@@ -259,7 +265,8 @@ impl BoardState {
         if !self.trail.is_empty() {
             let pos = self.trail.last().expect("This shouldn't happen");
             if self.trail.len() >= 2 && pos.0 == x && pos.1 == y {
-                self.score += self.finish_trail();
+                self.last_score =  self.finish_trail();
+                self.score += self.last_score;
                 self.trail.clear();
                 self.moves_left -= 1;
             } else if self.can_connect(x, y) {
@@ -275,8 +282,11 @@ impl BoardState {
 
     pub fn reset(&mut self) {
         self.dots.iter_mut().for_each(|b| {
-            *b = BoardColor::random();
+            *b = BoardColor::Empty;
         });
+        for i in 0..BOARD_SIZE {
+            self.fill_column(i);
+        }
         self.score = 0;
         self.trail.clear();
         self.moves_left = MOVE_LIMIT;
@@ -305,8 +315,7 @@ mod test {
 }
 
 widget!(DotBoard<BoardState>: MouseHandler {
-    score: u32,
-    pipeline:DefaultRenderPipeline
+    score: u32
 });
 
 impl State for BoardState {
@@ -333,7 +342,7 @@ impl State for BoardState {
         }
         let mut score_label = ctx.get_widget(self.score_label.expect("Failed to find label"));
         let text = score_label.get_mut::<String>("text");
-        *text = format!("Score: {}, moves left: {}", self.score, self.moves_left);
+        *text = format!("Score: {}(+{}), moves left: {}", self.score, self.last_score, self.moves_left);
         for x in 0..BOARD_SIZE {
             for y in 0..BOARD_SIZE {
                 let idx = Self::index(x, y);
