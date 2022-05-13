@@ -49,6 +49,8 @@ impl BoardColor {
 }
 /// The length of a side of the board.
 const BOARD_SIZE: usize = 10;
+const BOARD_WIDTH: usize = BOARD_SIZE + 2;
+const BOARD_HEIGHT: usize = BOARD_SIZE;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 struct DotAction {
@@ -62,15 +64,15 @@ The implementation  of a board state.
 #[derive(PartialEq, Eq, AsAny)]
 struct BoardState {
     /// Stores the board in a linear array
-    dots: [BoardColor; BOARD_SIZE * BOARD_SIZE],
+    dots: [BoardColor; BOARD_WIDTH * BOARD_HEIGHT],
     /// The trail of 'dots' selected.
     trail: Vec<(usize, usize)>,
     board_widgets: Vec<Entity>,
     score_label: Option<Entity>,
     action: Option<DotAction>,
     score: usize,
-    last_score:usize,
-    
+    last_score: usize,
+
     moves_left: usize,
     moused_over: Option<Entity>,
 }
@@ -80,17 +82,17 @@ const MOVE_LIMIT: usize = 30;
 impl BoardState {
     pub fn new() -> Self {
         let mut r: BoardState = BoardState {
-            dots: [BoardColor::Empty; BOARD_SIZE * BOARD_SIZE],
+            dots: [BoardColor::Empty; BOARD_WIDTH * BOARD_HEIGHT],
             trail: Vec::new(),
             board_widgets: Vec::new(),
             action: None,
             score_label: None,
             score: 0,
-            last_score:0,
+            last_score: 0,
             moves_left: MOVE_LIMIT,
             moused_over: None,
         };
-        for i in 0..BOARD_SIZE * BOARD_SIZE {
+        for i in 0..BOARD_WIDTH * BOARD_HEIGHT {
             r.dots[i] = BoardColor::random();
         }
         r
@@ -99,7 +101,7 @@ impl BoardState {
     Calculate the effective index for the position on the board
     */
     pub fn index(x: usize, y: usize) -> usize {
-        y * BOARD_SIZE + x
+        y * BOARD_WIDTH + x
     }
 
     /**
@@ -146,9 +148,9 @@ impl BoardState {
      if more sorting is needed.
     */
     fn fill_column(&mut self, x: usize) -> bool {
-        let mut first_empty: usize = BOARD_SIZE - 1;
+        let mut first_empty: usize = BOARD_HEIGHT - 1;
         let mut seen_non_empty = false;
-        for y in (0..BOARD_SIZE).rev() {
+        for y in (0..BOARD_HEIGHT).rev() {
             if self.dots[Self::index(x, y)] == BoardColor::Empty && !seen_non_empty {
                 first_empty = y;
             } else if seen_non_empty && self.dots[Self::index(x, y)] == BoardColor::Empty {
@@ -157,7 +159,7 @@ impl BoardState {
                 seen_non_empty = true;
             }
         }
-        for y in first_empty..BOARD_SIZE {
+        for y in first_empty..BOARD_HEIGHT {
             let i0 = Self::index(x, y);
             self.dots[i0] = BoardColor::random();
             if y == 0 {
@@ -184,7 +186,7 @@ impl BoardState {
                         && self.dots[i1] == self.dots[i2]
                         && self.dots[i1] == self.dots[i3];
                 }
-                if x < BOARD_SIZE - 1 {
+                if x < BOARD_WIDTH - 1 {
                     let i4 = Self::index(x + 1, y - 1);
                     let i5 = Self::index(x + 1, y);
                     roll_again |= self.dots[i3] == self.dots[i0]
@@ -205,11 +207,11 @@ impl BoardState {
     replacing them
     */
     pub fn drop_remaining(&mut self) {
-        for x in 0..BOARD_SIZE {
+        for x in 0..BOARD_WIDTH {
             let mut found_empty = true;
             while found_empty {
                 found_empty = false;
-                for y in 0..BOARD_SIZE - 1 {
+                for y in 0..BOARD_HEIGHT - 1 {
                     let col = self.dots[Self::index(x, y)];
                     if col == BoardColor::Empty {
                         self.dots.swap(Self::index(x, y), Self::index(x, y + 1));
@@ -265,7 +267,7 @@ impl BoardState {
         if !self.trail.is_empty() {
             let pos = self.trail.last().expect("This shouldn't happen");
             if self.trail.len() >= 2 && pos.0 == x && pos.1 == y {
-                self.last_score =  self.finish_trail();
+                self.last_score = self.finish_trail();
                 self.score += self.last_score;
                 self.trail.clear();
                 self.moves_left -= 1;
@@ -284,7 +286,7 @@ impl BoardState {
         self.dots.iter_mut().for_each(|b| {
             *b = BoardColor::Empty;
         });
-        for i in 0..BOARD_SIZE {
+        for i in 0..BOARD_WIDTH {
             self.fill_column(i);
         }
         self.score = 0;
@@ -320,8 +322,8 @@ widget!(DotBoard<BoardState>: MouseHandler {
 
 impl State for BoardState {
     fn init(&mut self, _reg: &mut Registry, ctx: &mut Context) {
-        for y in 0..BOARD_SIZE {
-            for x in 0..BOARD_SIZE {
+        for y in 0..BOARD_HEIGHT {
+            for x in 0..BOARD_WIDTH {
                 let thing = format!("{}x{}", x, y);
                 self.board_widgets.push(
                     ctx.entity_of_child(thing.as_str())
@@ -342,9 +344,12 @@ impl State for BoardState {
         }
         let mut score_label = ctx.get_widget(self.score_label.expect("Failed to find label"));
         let text = score_label.get_mut::<String>("text");
-        *text = format!("Score: {}(+{}), moves left: {}", self.score, self.last_score, self.moves_left);
-        for x in 0..BOARD_SIZE {
-            for y in 0..BOARD_SIZE {
+        *text = format!(
+            "Score: {}(+{}), moves left: {}",
+            self.score, self.last_score, self.moves_left
+        );
+        for x in 0..BOARD_WIDTH {
+            for y in 0..BOARD_HEIGHT {
                 let idx = Self::index(x, y);
                 let en = self.board_widgets[idx];
 
@@ -425,16 +430,16 @@ impl Template for DotBoard {
         let mut grid = Grid::new();
         // Is this actually how I have to do this?
         let columns =
-            Blocks::create().repeat(Block::create().size(BlockSize::Auto).build(), BOARD_SIZE);
+            Blocks::create().repeat(Block::create().size(BlockSize::Auto).build(), BOARD_WIDTH);
         let rows = Blocks::create().repeat(
             Block::create().size(BlockSize::Auto).build(),
-            BOARD_SIZE + 1,
+            BOARD_HEIGHT + 1,
         );
         grid = grid.columns(columns).rows(rows);
-        for y in 0..BOARD_SIZE {
-            for x in 0..BOARD_SIZE {
+        for y in 0..BOARD_HEIGHT {
+            for x in 0..BOARD_WIDTH {
                 let button = generate_board_button(x, y, id, ctx);
-                grid = grid.place(ctx, button, x, BOARD_SIZE - 1 - y);
+                grid = grid.place(ctx, button, x, BOARD_HEIGHT - 1 - y);
             }
         }
         // Without another grid the grid of buttons is sized for the label and button,
